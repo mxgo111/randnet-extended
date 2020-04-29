@@ -187,6 +187,9 @@ class RandNet2(torch.nn.Module):
                 flatten = y_batched_padded.view(-1, y_batched_padded.shape[-2]*y_batched_padded.shape[-1], 1)
                 r_batched_padded = torch.matmul(self.get_param("Phi"), flatten)
 
+                if t == 0:
+                    r = r_batched_padded.view(-1, 1, 28, 28)
+
                 # print("r_batched_padded:", r_batched_padded.shape)
 
                 x_tilda = r_batched_padded - PhiHyk
@@ -248,7 +251,7 @@ class RandNet2(torch.nn.Module):
 
             # ).mean(dim=1, keepdim=False)
 
-            return r_hat, y_hat, x_new, self.lam
+            return r, r_hat, y_hat, x_new, self.lam
 
         else: # Note : pass in r later for testing
             # y_batched_padded, valids_batched = self.split_image(i)

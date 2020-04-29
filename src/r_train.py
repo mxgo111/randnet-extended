@@ -3,6 +3,7 @@ from torch.utils.data import Dataset, DataLoader
 import torch.optim as optim
 import torch.nn.functional as F
 import torchvision
+import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
@@ -14,6 +15,7 @@ from datetime import datetime
 from sacred import Experiment
 
 from sacred import SETTINGS
+from tensorboardX import SummaryWriter
 
 SETTINGS.CONFIG.READ_ONLY_CONFIG = False
 
@@ -36,45 +38,109 @@ ex = Experiment("train", ingredients=[config_ingredient])
 
 @ex.automain
 def run(cfg):
-
     hyp = cfg["hyp"]
 
-    print(hyp)
-
     random_date = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-
-    PATH = "../results/{}/{}".format(hyp["experiment_name"], random_date)
+    # PATH = "../results/{}/{}".format(hyp["experiment_name"], random_date)
+    PATH = "../results/{}".format(random_date)
     os.makedirs(PATH)
-
-    filename = os.path.join(PATH, "hyp.pickle")
-    with open(filename, "wb") as file:
-        pickle.dump(hyp, file)
+    writer = SummaryWriter(PATH)
 
     print("load data.")
     if hyp["dataset"] == "MNIST":
         train_loader, test_loader = r_generator.get_MNIST_loaders(
             hyp["batch_size"],
             shuffle=hyp["shuffle"]
-            # Not putting train_batch or test_batch options here
         )
-    # elif hyp["dataset"] == "simulated":
-    #     dataset = r_dataset.SimulatedDataset1D(hyp)
-    #     train_loader = DataLoader(
-    #         dataset, shuffle=hyp["shuffle"], batch_size=hyp["batch_size"]
-    #     )
+    elif hyp["dataset"] == "Image":
+        train_loader = r_generator.get_path_loader(
+        batch_size=hyp["batch_size"],
+        image_path="../test_img/",
+        shuffle=hyp["shuffle"],
+        crop_dim=hyp["crop_dim"]
+        )
     else:
         print("dataset is not implemented.")
 
+    # for i, (images, labels) in enumerate(train_loader):
+    #
+
+    # Visualizations
+    dataiter = iter(train_loader)
+    images, labels = dataiter.next()
+    print("images.shape = ", images.shape)
+
+    # create grid of images
+    img_grid = torchvision.utils.make_grid(images)
+
+    # show images
+    r_utils.matplotlib_imshow(img_grid, one_channel=True)
+    # r_utils.matplotlib_imshow(images, one_channel=True)
+
+    # write to tensorboard
+    writer.add_image('mnist_images', img_grid)
+
     # Omitting the init with DCTDictionary - not sure what it does
     H_init = None
-    Phi_init = None
+    # dct_dictionary = DCTDictionary(
+    #     hyp["dictionary_dim"], np.int(np.sqrt(hyp["num_conv"]))
+    # )
+    # H_init = dct_dictionary.matrix.reshape(
+    #     hyp["dictionary_dim"], hyp["dictionary_dim"], hyp["num_conv"]
+    # ).T
+    # H_init = np.expand_dims(H_init, axis=1)
+    # H_init = torch.from_numpy(H_init).float().to(hyp["device"])
+    # Phi_init = None
+
+    Phi_init = torch.eye(
+        784, device='cpu',
+        #dimension of data to smaller dimension
+    )
 
     print("create model.")
     net = r_model.RandNet2(hyp, H_init, Phi_init)
 
     torch.save(net, os.path.join(PATH, "model_init.pt"))
 
+    r, r_hat, y_hat, x_new, lam = net(images)
 
+    print("model ran.")
+
+    r_hat = r_hat.view(-1, 1, 28, 28)
+    print(r_hat.shape)
+    # print(y_hat.shape)
+    # print(r_utils.find_maximum(y_hat))
+
+    img_grid = torchvision.utils.make_grid(r)
+
+    r_utils.matplotlib_imshow(img_grid, one_channel=True)
+    writer.add_image('r', img_grid)
+
+    print("add first image.")
+
+    plt.imshow(r[0][0].detach().numpy(), cmap='gray')
+    plt.show()
+
+    plt.imshow(r_hat[0][0].detach().numpy(), cmap='gray')
+    plt.show()
+
+    print("image shows")
+
+    img_grid = torchvision.utils.make_grid(r_hat)
+
+    r_utils.matplotlib_imshow(img_grid, one_channel=True)
+    writer.add_image('r_hat', img_grid)
+
+    img_grid = torchvision.utils.make_grid(y_hat)
+
+    r_utils.matplotlib_imshow(img_grid, one_channel=True)
+    writer.add_image('y_hat', img_grid)
+
+    # writer.add_graph(net, images)
+
+    print("tensorboard --logdir={} --host localhost --port 8088".format(PATH))
+
+    sys.exit()
     # different loss functions?
     # use r - r_hat to learn Phi and y - y_hat to learn H? Would need 2 optimizers.
     # try y - y_hat with MSELoss to learn both H and Phi
@@ -85,9 +151,7 @@ def run(cfg):
         criterion = torch.nn.L1Loss()
     elif hyp["loss"] == "MSSSIM_l1":
         criterion = utils.MSSSIM_l1()
-    # for p in net.parameters():
-    #     print(p.shape)
-    # sys.exit()
+
     optimizer = optim.Adam(net.parameters(), lr=hyp["lr"], eps=1e-3)
 
     scheduler = optim.lr_scheduler.StepLR(

@@ -94,20 +94,6 @@ def run(cfg):
     else:
         H_init = None
 
-# instructions:
-# set r_dim to be slightly smaller than 784 (600?)
-# initialize H with DCTDictionary
-# visualize y
-# visualize r
-# run network through forward
-# visualize y hat
-# visualize r hat
-    # tune lambda by hand (if y hat is dark, decrease lambda)
-# try setting phi to be identity (r = 784)
-    # r should be equal to r_hat, y should be equal to y_hat
-
-# compare later with trained network
-
     print("create model.")
     if hyp["network"] == "CRsAE1D":
         net = model.CRsAE1D(hyp, H_init)

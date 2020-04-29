@@ -1,0 +1,45 @@
+instructions:
+set r_dim to be slightly smaller than 784 (600?)
+initialize H with DCTDictionary
+visualize y
+  tensorboard --logdir=../results/test --host localhost --port 8088
+visualize r
+run network through forward
+visualize y hat
+visualize r hat
+    tune lambda by hand (if y hat is dark, decrease lambda)
+try setting phi to be identity (r = 784)
+    r should be equal to r_hat, y should be equal to y_hat
+
+compare later with trained network
+
+play around with the lambda for reconstruction
+play around with DCTDictionary
+
+
+training phi in randnet
+
+eventually list out all the different scenarios
+
+
+Make Phi a convolution?
+- with strides that do not overlap
+
+Try VOC dataset for DCT dictionary
+
+use images in path on github
+use get_path_loader to display image
+use 64 8x8 filters
+tune lambda (use for loop)
+
+try tensorboard on computer server - use link by
+
+
+
+
+
+FUTURE OPTIMIZATIONS OF MODEL/CODE:
+  - allow for rectangular images
+    - e.g. not just y_dim, but y_dim1, y_dim2
+  - make stride not equal to 1
+    - e.g. put split_image function back
