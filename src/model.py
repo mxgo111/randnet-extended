@@ -80,7 +80,8 @@ class RandNet2(torch.nn.Module):
 
             # Obtain original r
             input1d = input.view(-1, input.shape[-2]*input.shape[-1], 1)
-            r_og = (torch.matmul(self.get_param("Phi"), input1d)).view(-1, 1, self.r_dim, self.y_dim)
+            r_og1d = torch.matmul(self.get_param("Phi"), input1d)
+            # r_og1d = r_og2d.view(-1, 1, self.r_dim*self.y_dim, 1)
 
             # Perform ISTA
             t_old = torch.tensor(1, device=self.device).float()
@@ -90,7 +91,7 @@ class RandNet2(torch.nn.Module):
                 flatten = Hyk.view(-1,Hyk.shape[-2]* Hyk.shape[-1], 1)
                 PhiHyk = torch.matmul(self.get_param("Phi"), flatten)
 
-                x_tilda = r_og - PhiHyk
+                x_tilda = r_og1d - PhiHyk
                 Phi_t_x_tilda1d = torch.matmul(torch.t(self.get_param("Phi")), x_tilda)
                 Phi_t_x_tilda2d = Phi_t_x_tilda1d.view(-1, 1, Hyk.shape[-2], Hyk.shape[-1])
 
@@ -112,30 +113,15 @@ class RandNet2(torch.nn.Module):
 
                 x_old, t_old = x_new, t_new
 
-            Hx = F.conv_transpose2d(x_new, self.get_param("H"), stride=self.stride)
-            y_hat = Hx
-            flatten2 = Hx.view(-1, Hx.shape[-2]* Hx.shape[-1], 1) # TODO check this later
-            PhiHx = torch.matmul(self.get_param("Phi"), flatten2)
-
+            Hx2d = F.conv_transpose2d(x_new, self.get_param("H"), stride=self.stride)
+            y_hat = Hx2d
+            Hx1d = Hx2d.view(-1, Hx2d.shape[-2]* Hx2d.shape[-1], 1)
+            PhiHx = torch.matmul(self.get_param("Phi"), Hx1d)
             r_hat = PhiHx
-            # (
-            #     torch.masked_select( # look into this (TODO), check if dimensions match (TODO)
-            #         PhiHx,
-            #         valids_batched.byte(),
-            #     ).reshape(y.shape[0], self.stride ** 2, *y.shape[1:])
 
-            # if this line fails, set z = PhiHx and stride = 1
+            print("FINISHED")
 
-                # do the same thing for conv_transpose above
-                # to get y_hat, need to get H x_new
-                # to get r_hat, find phi H x_new
-                # output r_hat, y_hat, and x_new, and (lambda)
-
-                # challenge: reshaping the input to Phi, because the image is 2d but need 1d for matrix multiplication - how to turn back to 2d?
-
-            # ).mean(dim=1, keepdim=False)
-
-            return r, r_hat, y_hat, x_new, self.lam
+            return r_og1d, r_hat, y_hat, x_new, self.lam
 
         else: # Note : pass in r later for testing
             # y_batched_padded, valids_batched = self.split_image(i)

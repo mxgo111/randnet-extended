@@ -24,7 +24,7 @@ from pytorch_msssim import MS_SSIM
 
 sys.path.append("src/")
 
-import model, r_generator, r_trainer, r_utils, r_conf
+import model, generator, r_trainer, utils, r_conf
 
 from conf import config_ingredient
 
@@ -46,12 +46,12 @@ def run(cfg):
 
     print("load data.")
     if hyp["dataset"] == "MNIST":
-        train_loader, test_loader = r_generator.get_MNIST_loaders(
+        train_loader, test_loader = generator.get_MNIST_loaders(
             hyp["batch_size"],
             shuffle=hyp["shuffle"]
         )
     elif hyp["dataset"] == "Image":
-        train_loader = r_generator.get_path_loader(
+        train_loader = generator.get_path_loader(
         batch_size=hyp["batch_size"],
         image_path="../test_img/",
         shuffle=hyp["shuffle"],
@@ -59,9 +59,6 @@ def run(cfg):
         )
     else:
         print("dataset is not implemented.")
-
-    # for i, (images, labels) in enumerate(train_loader):
-    #
 
     # Visualizations
     dataiter = iter(train_loader)
@@ -72,23 +69,12 @@ def run(cfg):
     img_grid = torchvision.utils.make_grid(images)
 
     # show images
-    r_utils.matplotlib_imshow(img_grid, one_channel=True)
-    # r_utils.matplotlib_imshow(images, one_channel=True)
+    # utils.matplotlib_imshow(img_grid)
 
-    # write to tensorboard
+    # write original images to tensorboard
     writer.add_image('mnist_images', img_grid)
 
-    # Omitting the init with DCTDictionary - not sure what it does
     H_init = None
-    # dct_dictionary = DCTDictionary(
-    #     hyp["dictionary_dim"], np.int(np.sqrt(hyp["num_conv"]))
-    # )
-    # H_init = dct_dictionary.matrix.reshape(
-    #     hyp["dictionary_dim"], hyp["dictionary_dim"], hyp["num_conv"]
-    # ).T
-    # H_init = np.expand_dims(H_init, axis=1)
-    # H_init = torch.from_numpy(H_init).float().to(hyp["device"])
-    # Phi_init = None
 
     Phi_init = torch.eye(
         784, device='cpu',
@@ -103,43 +89,49 @@ def run(cfg):
     r, r_hat, y_hat, x_new, lam = net(images)
 
     print("model ran.")
-    sys.exit()
 
     r_hat = r_hat.view(-1, 1, 28, 28)
     print(r_hat.shape)
     # print(y_hat.shape)
     # print(r_utils.find_maximum(y_hat))
 
+    r = r.view(-1, 1, 28, 28)
+
     img_grid = torchvision.utils.make_grid(r)
 
-    r_utils.matplotlib_imshow(img_grid, one_channel=True)
+    # utils.matplotlib_imshow(img_grid)
+    # plt.show()
+
     writer.add_image('r', img_grid)
 
     print("add first image.")
 
-    plt.imshow(r[0][0].detach().numpy(), cmap='gray')
-    plt.show()
-
-    plt.imshow(r_hat[0][0].detach().numpy(), cmap='gray')
-    plt.show()
+    # plt.imshow(r[0][0].detach().numpy(), cmap='gray')
+    # plt.show()
+    #
+    # plt.imshow(r_hat[0][0].detach().numpy(), cmap='gray')
+    # plt.show()
 
     print("image shows")
 
     img_grid = torchvision.utils.make_grid(r_hat)
 
-    r_utils.matplotlib_imshow(img_grid, one_channel=True)
+    # utils.matplotlib_imshow(img_grid)
     writer.add_image('r_hat', img_grid)
 
     img_grid = torchvision.utils.make_grid(y_hat)
 
-    r_utils.matplotlib_imshow(img_grid, one_channel=True)
+    # utils.matplotlib_imshow(img_grid)
     writer.add_image('y_hat', img_grid)
 
     # writer.add_graph(net, images)
 
-    print("tensorboard --logdir={} --host localhost --port 8088".format(PATH))
+    writer.close()
 
     sys.exit()
+
+    print("tensorboard --logdir={} --host localhost --port 8088".format(PATH))
+
     # different loss functions?
     # use r - r_hat to learn Phi and y - y_hat to learn H? Would need 2 optimizers.
     # try y - y_hat with MSELoss to learn both H and Phi

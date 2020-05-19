@@ -1,6 +1,5 @@
 import torch
-
-from sacred import Experiment, Ingredient
+from sacred import Ingredient
 
 config_ingredient = Ingredient("cfg")
 
@@ -9,8 +8,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 @config_ingredient.config
 def cfg():
     dict_dim = 8
-    y_dim = 28 # for the images, should be lower
-    r_dim = 20 # What value should this be?
+    y_dim = 784 # for the images, should be lower
+    r_dim = 600 # What value should this be?
     epoch_start = 0
     epoch_end = 20
     hyp = {
@@ -44,7 +43,7 @@ def cfg():
         "shuffle": True,
         "batch_size": 32, # 32
         "num_epochs": 100, # 500
-        "use_lam": False,
+        "use_lam": True,
         "info_period": 100,
         "denoising": True,
         "supervised": True,

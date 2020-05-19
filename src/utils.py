@@ -85,15 +85,10 @@ def calc_pad_sizes(y, dictionary_dim=8, stride=1):
     bot_pad = (stride - ((x.shape[2] - dictionary_dim) % stride)) % stride + stride
     return stride, right_pad, stride, bot_pad
 
-def matplotlib_imshow(img, one_channel=False):
-    if one_channel:
-        img = img.mean(dim=0)
-    # img = img / 2 + 0.5     # unnormalize
+def matplotlib_imshow(img):
+    img = img.mean(dim=0)
     npimg = img.detach().numpy()
-    if one_channel:
-        plt.imshow(npimg, cmap="Greys")
-    else:
-        plt.imshow(np.transpose(npimg, (1, 2, 0)))
+    plt.imshow(npimg, cmap="Greys")
 
 def find_maximum(img):
     batch_size = img.shape[0]
